@@ -11,9 +11,9 @@ from transformer_utilities.set_transformer import SetTransformer
 
 from transformer.Models import Encoder as Vanilla_transformer_encoder
 
-from transformer.Models_block import Encoder as Block_transformer_encoder
+from transformer.Models_block import Encoder_block as Block_transformer_encoder, Encoder_hierachy as Hierachy_transformer_encoder
 
-
+from perceiver_pytorch_DL import Perceiver,Perceiver_hierachy
 
 
 class ConvInputModel(nn.Module):
@@ -290,10 +290,15 @@ class Transformer(BasicModel):
 
         elif args.Method=="Block":
             self.net = Block_transformer_encoder(
-            n_layers=args.num_layers, n_head=4,
+            n_layers=args.num_layers, n_head=1,
             d_k=h_dim, d_v=h_dim,
-            d_model=h_dim, d_inner=h_dim, dropout=0.1)
+            d_model=h_dim, d_inner=h_dim//4, dropout=0.1)
 
+        elif args.Method=="Hierachy":
+            self.net = Hierachy_transformer_encoder(
+            n_layers=args.num_layers, n_head=1,
+            d_k=h_dim, d_v=h_dim,
+            d_model=h_dim, d_inner=h_dim//4, dropout=0.1)
 
 
 
@@ -313,8 +318,9 @@ class Transformer(BasicModel):
         p = self.patch_size
 
         x = rearrange(img, 'b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = p, p2 = p)
-        #print(x.size())
+        
         x = self.patch_to_embedding(x)
+
 
         #q = self.question_to_embedding(qst.unsqueeze(-1))
         q = self.question_to_embedding(qst)
@@ -333,6 +339,113 @@ class Transformer(BasicModel):
 
         x = self.net(x)
 
+
         x = F.log_softmax(self.mlp_head(x[:,0]), dim = 1)
+
+        return x
+
+
+
+class PerceiverModel(BasicModel):
+    def __init__(self,  args):
+        super(PerceiverModel, self).__init__(args, 'Transformer')
+
+        image_size = args.image_size
+        patch_size = args.patch_size
+        h_dim = args.embed_dim
+        channels = 3
+        num_classes = 10
+        self.num_classes=num_classes
+
+
+        assert image_size % patch_size == 0, 'Image dimensions must be divisible by the patch size.'
+        num_patches = (image_size // patch_size) ** 2
+        patch_dim = channels * patch_size ** 2
+        #assert num_patches > MIN_NUM_PATCHES, f'your number of patches ({num_patches}) is way too small for attention to be effective (at least 16). Try decreasing your patch size'
+
+        self.patch_size = patch_size
+        print(patch_dim)
+        self.patch_to_embedding = nn.Linear(patch_dim, h_dim)
+        self.question_to_embedding = nn.Linear(18, h_dim)
+        #self.question_to_embedding = nn.Linear(1, h_dim)
+        self.cls_token = nn.Parameter(torch.randn(1, 1, h_dim))
+
+
+        if args.Method=="VanillaPerceiver":
+                self.net = Perceiver(
+                input_channels = 3,          # number of channels for each token of the input
+                input_axis = 2,              # number of axis for input data (2 for images, 3 for video)
+                num_freq_bands = 6,          # number of freq bands, with original value (2 * K + 1)
+                max_freq = 10.,              # maximum frequency, hyperparameter depending on how fine the data is
+                depth = args.num_layers,     # depth of net. The shape of the final attention mechanism will be:
+                             #   depth * (cross attention -> self_per_cross_attn * self attention)
+                num_latents = 256,           # number of latents, or induced set points, or centroids. different papers giving it different names
+                latent_dim = 256,            # latent dimension
+                cross_heads = 1,             # number of heads for cross attention. paper said 1
+                latent_heads = 8,            # number of heads for latent self attention, 8
+                cross_dim_head = 64,         # number of dimensions per cross attention head
+                latent_dim_head = 64,        # number of dimensions per latent self attention head
+                num_classes = self.num_classes, # output number of classes
+                attn_dropout = 0.,
+                ff_dropout = 0.,
+                weight_tie_layers = False,   # whether to weight tie layers (optional, as indicated in the diagram)
+                fourier_encode_data = True,  # whether to auto-fourier encode the data, using the input_axis given. defaults to True, but can be turned off if you are fourier encoding the data yourself
+                self_per_cross_attn = 1,      # number of self attention blocks per cross attention
+                input_dim=256
+                )
+
+
+        if args.Method=="HierachicalPerceiver":
+                self.net = Perceiver_hierachy(
+                input_channels = 3,          # number of channels for each token of the input
+                input_axis = 2,              # number of axis for input data (2 for images, 3 for video)
+                num_freq_bands = 6,          # number of freq bands, with original value (2 * K + 1)
+                max_freq = 10.,              # maximum frequency, hyperparameter depending on how fine the data is
+                depth = args.num_layers//2,     # depth of net. The shape of the final attention mechanism will be:
+                             #   depth * (cross attention -> self_per_cross_attn * self attention)
+                num_latents = 128,           # number of latents, or induced set points, or centroids. different papers giving it different names
+                latent_dim = 256,            # latent dimension
+                cross_heads = 1,             # number of heads for cross attention. paper said 1
+                latent_heads = 8,            # number of heads for latent self attention, 8
+                cross_dim_head = 64,         # number of dimensions per cross attention head
+                latent_dim_head = 64,        # number of dimensions per latent self attention head
+                num_classes = num_classes, # output number of classes
+                attn_dropout = 0.,
+                ff_dropout = 0.,
+                weight_tie_layers = False,   # whether to weight tie layers (optional, as indicated in the diagram)
+                fourier_encode_data = True,  # whether to auto-fourier encode the data, using the input_axis given. defaults to True, but can be turned off if you are fourier encoding the data yourself
+                self_per_cross_attn = 1,      # number of self attention blocks per cross attention
+                input_dim=256
+                )
+
+
+
+
+        self.optimizer = optim.Adam(self.parameters(), lr=args.lr)
+
+    def forward(self, img, qst):
+        p = self.patch_size
+
+        x = rearrange(img, 'b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = p, p2 = p)
+
+        x = self.patch_to_embedding(x)
+
+        #q = self.question_to_embedding(qst.unsqueeze(-1))
+        q = self.question_to_embedding(qst)
+
+        q= q.unsqueeze(1)
+        #print(x.size(), flush=True)
+        #print(q.size(), flush=True)
+        x = torch.cat((q, x), dim = 1)
+        #print(x.size())
+        b, n, _ = x.shape
+
+        cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
+        x = torch.cat((cls_tokens, x), dim=1)
+
+        x = self.net(x)
+    
+
+        x = F.log_softmax(x, dim = 1)
 
         return x

@@ -28,7 +28,7 @@ sub_q_type_idx = 15
 """Answer : [yes, no, rectangle, circle, r, g, b, o, k, y]"""
 
 nb_questions = 10
-dirs = './data'
+dirs = '../../../data'
 
 colors = [
     (0,0,255),##r

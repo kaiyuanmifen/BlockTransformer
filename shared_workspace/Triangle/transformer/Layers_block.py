@@ -9,7 +9,7 @@ __author__ = "DL"
 class EncoderLayer_block(nn.Module):
     ''' Compose with two layers '''
 
-    def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1,N_blocks=5,N_slots=128):
+    def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1,N_blocks=4,N_slots=128):
         super(EncoderLayer_block, self).__init__()
 
         self.ax_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)  
@@ -111,7 +111,7 @@ class EncoderLayer_block(nn.Module):
 class EncoderLayer_hierachy(nn.Module):
     ''' Compose with two layers '''
 
-    def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1,N_blocks=5,N_slots=128):
+    def __init__(self, d_model, d_inner, n_head, d_k, d_v, dropout=0.1,N_blocks=4,N_slots=128):
         super(EncoderLayer_hierachy, self).__init__()
 
         self.ax_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)  

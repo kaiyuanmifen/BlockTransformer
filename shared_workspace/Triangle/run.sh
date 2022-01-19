@@ -1,4 +1,20 @@
 #!/bin/bash
+#!/bin/bash
+#SBATCH --job-name=train_sort_of_clevr
+#SBATCH --gres=gpu:1             # Number of GPUs (per node)
+#SBATCH --mem=60G               # memory (per node)
+#SBATCH --time=0-8:00            # time (DD-HH:MM)
+
+###########cluster information above this line
+
+
+###load environment 
+
+module load anaconda/3
+module load cuda/10.1
+conda activate AIAYNTransformer
+
+
 
 #run.sh default Triangle 0 4 0.1 100 4 4 8 0.0001 64 128 2 2 True 6 True False 10 False 4 False 3
 
