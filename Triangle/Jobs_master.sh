@@ -10,8 +10,8 @@
 
 
 
-#declare -a All_Methods=("VanillaPerceiver" "HierachicalPerceiver" "Hierachy" "Block" "Vanilla")
-declare -a All_Methods=("VanillaPerceiver" "HierachicalPerceiver" )
+declare -a All_Methods=("VanillaPerceiver" "HierachicalPerceiver" "Hierachy" "Block" "Vanilla")
+#declare -a All_Methods=("VanillaPerceiver" "HierachicalPerceiver" )
 
 
 declare -a All_seeds=(1)

@@ -19,19 +19,18 @@
 
 #####transformer version
 
-# #declare -a All_Methods=("Hierachy" "Block" "Vanilla")
-# declare -a All_Methods=("Hierachy" "Block" "Vanilla")
-# declare -a All_seeds=(2 3)
+declare -a All_Methods=("Hierachy" "Block" "Vanilla")
+declare -a All_seeds=(2 3)
 
-# for Method in "${All_Methods[@]}"
-# do
+for Method in "${All_Methods[@]}"
+do
 
-# 	for seed in "${All_seeds[@]}"
-# 	do
+	for seed in "${All_seeds[@]}"
+	do
 
-# 		sbatch run_transformer.sh 256 4 False False 5 False 8 $seed $Method
-# 	done
-# done
+		sbatch run_transformer.sh 256 4 False False 5 False 8 $seed $Method
+	done
+done
 
 
 
